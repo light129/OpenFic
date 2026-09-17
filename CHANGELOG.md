@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.12.0](https://github.com/syrizelink/OpenFic/compare/v0.11.1...v0.12.0) (2026-09-17)
+
+
+### ✨ 新功能
+
+* **frontend:** 增加自定义主题设置 ([#398](https://github.com/syrizelink/OpenFic/issues/398)) ([5cd2241](https://github.com/syrizelink/OpenFic/commit/5cd2241a14d4df586af5eea754a83b6de17baa12))
+
+
+### 🐛 问题修复
+
+* **frontend:** 修复工具栏滑动误触发移动端侧栏手势的问题 ([#395](https://github.com/syrizelink/OpenFic/issues/395)) ([284cf6b](https://github.com/syrizelink/OpenFic/commit/284cf6bf0c5c98f6ed36ae38db9f7f5225d62b87))
+
+
+### 🔧 杂项
+
+* **summary:** 增加摘要设置 ([#400](https://github.com/syrizelink/OpenFic/issues/400)) ([afb0264](https://github.com/syrizelink/OpenFic/commit/afb02649081140fb70e80dca2fe7b1fc108f95b4))
+
 ## [0.11.1](https://github.com/syrizelink/OpenFic/compare/v0.11.0...v0.11.1) (2026-09-09)
 
 
