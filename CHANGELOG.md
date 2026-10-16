@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.13.0](https://github.com/syrizelink/OpenFic/compare/v0.12.1...v0.13.0) (2026-10-16)
+
+
+### ✨ 新功能
+
+* **backend:** 支持 PostgreSQL 数据库后端 ([#452](https://github.com/syrizelink/OpenFic/issues/452)) ([8ce5cb8](https://github.com/syrizelink/OpenFic/commit/8ce5cb8c1dbbd8947c314460f795dfcd629bf9eb))
+
+
+### 🐛 问题修复
+
+* **agent:** 修复模型以 JSON 字符串格式传递工具对象参数时解析失败的问题 ([#450](https://github.com/syrizelink/OpenFic/issues/450)) ([cc98518](https://github.com/syrizelink/OpenFic/commit/cc985187950f125702ab2c5bf1163ae7caf2e5f3))
+
+
+### 🔧 杂项
+
+* **provider:** 添加 Requesty 提供商 ([#420](https://github.com/syrizelink/OpenFic/issues/420)) ([d578743](https://github.com/syrizelink/OpenFic/commit/d578743fda02024f42c191bfdf73388e3f78469a))
+
 ## [0.12.1](https://github.com/syrizelink/OpenFic/compare/v0.12.0...v0.12.1) (2026-10-11)
 
 
