@@ -1,0 +1,28 @@
+.agent-board-dialog {
+  max-height: min(85vh, 850px);
+  display: flex;
+  flex-direction: column;
+}
+.agent-board-messages {
+  overflow-y: auto;
+  min-height: 120px;
+  padding: 2px;
+}
+.agent-board-message {
+  border: 1px solid var(--gray-5);
+  border-radius: var(--radius-3);
+  padding: 14px;
+  margin-top: 12px;
+  background: var(--gray-1);
+}
+.agent-board-message[data-retracted="true"] {
+  opacity: 0.6;
+}
+.agent-board-message-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 10px 0 0;
+  font-size: var(--font-size-2);
+  line-height: 1.65;
+  user-select: text;
+}

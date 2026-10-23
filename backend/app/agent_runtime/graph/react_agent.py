@@ -85,6 +85,7 @@ from app.agent_runtime.tool_call_recovery import (
 if TYPE_CHECKING:
     from app.audit import LLMCallAudit
     from app.agent_runtime.graph.state import AgentRuntimeState
+    from app.agent_runtime.runner.background_subagents import BackgroundSubagentMailbox
 
 
 # ---------------------------------------------------------------------------
@@ -681,6 +682,7 @@ def create_react_agent(
     model: Any | None = None,
     inject_queue: asyncio.Queue | None = None,
     checkpointer: Any | None = None,
+    background_subagents: BackgroundSubagentMailbox | None = None,
 ):
     """Create and compile a ReAct subgraph from the given config.
 
@@ -692,6 +694,8 @@ def create_react_agent(
         The LLM to use. If None, a placeholder is used (tests mock _invoke_model).
     inject_queue : asyncio.Queue | None
         Optional queue for injecting user messages mid-execution.
+    background_subagents : BackgroundSubagentMailbox | None
+        Parent-owned mailbox drained between model calls and before completion.
 
     Returns
     -------
@@ -784,9 +788,15 @@ def create_react_agent(
         pruned_tool_call_ids: tuple[str, ...] = ()
         effective_runtime_state: dict[str, Any] | None = None
         injected_user_contents: list[str] = []
+        background_messages = (
+            await background_subagents.collect({m.id for m in state["messages"] if m.id})
+            if background_subagents is not None
+            else []
+        )
+        input_messages = [*state["messages"], *background_messages]
 
         if isinstance(runtime_state, Mapping) and db_session is not None:
-            node_messages = [_to_history_dict(m) for m in state["messages"]]
+            node_messages = [_to_history_dict(m) for m in input_messages]
             history_seq_resolver = configurable.get("history_seq_resolver")
             if callable(history_seq_resolver):
                 await _maybe_await(history_seq_resolver(node_messages))
@@ -829,11 +839,21 @@ def create_react_agent(
                 )
                 if isinstance(message, ToolMessage)
                 else message
-                for message in state["messages"]
+                for message in input_messages
             ]
 
         transient_parts: list[ContextMessage] = []
         transient_messages: list[BaseMessage] = []
+        board = configurable.get("agent_board")
+        if board is not None and any(
+            tool.name == "board_read" for tool in react_config.tools
+        ):
+            board_prompt = await board.prompt()
+            if board_prompt:
+                transient_parts.append(ContextMessage(
+                    role="system", content=board_prompt, metadata={"part": "runtime"},
+                ))
+                transient_messages.append(SystemMessage(content=board_prompt))
         resumption_prompt = configurable.get("resumption_prompt")
         if isinstance(resumption_prompt, str) and resumption_prompt:
             transient_parts.append(ContextMessage(
@@ -1061,7 +1081,7 @@ def create_react_agent(
                 await _finish_active_audit()
 
         update: dict[str, Any] = {
-            "messages": [response],
+            "messages": [*background_messages, response],
             "iteration_count": state["iteration_count"] + 1,
             "tool_outcomes": Overwrite([]),
             "tool_prepared_outcomes": Overwrite([]),
@@ -1071,12 +1091,12 @@ def create_react_agent(
             update["messages"] = Overwrite(
                 [
                     *_mark_state_messages_pruned(
-                        state["messages"], set(pruned_tool_call_ids)
+                        input_messages, set(pruned_tool_call_ids)
                     ),
                     response,
                 ]
             )
-        if drained_injected_user_message:
+        if drained_injected_user_message or background_messages:
             update["is_done"] = False
             update["final_output"] = None
         return update
@@ -1577,13 +1597,19 @@ def create_react_agent(
         if inject_queue is not None and not inject_queue.empty():
             return "llm_call"
 
+        if state["iteration_count"] >= max_iterations:
+            return "__end__"
+
+        if (
+            background_subagents is not None
+            and await background_subagents.wait_until_ready(inject_queue)
+        ):
+            return "llm_call"
+
         if state.get("is_done"):
             return "__end__"
 
         if termination.mode == "no_tool_call":
-            return "__end__"
-
-        if state["iteration_count"] >= max_iterations:
             return "__end__"
 
         return "llm_call"

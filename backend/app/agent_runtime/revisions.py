@@ -1235,6 +1235,8 @@ async def rollback_revision_for_session(
         session,
         parent_revision_ids=[revision.id for revision in revisions],
     )
+    from app.agent_runtime.agent_board import retract_revisions
+    await retract_revisions(session, [revision.id for revision in revisions])
 
     for revision in revisions:
         await revision_repo.update_status(session, revision.id, "rolled_back")

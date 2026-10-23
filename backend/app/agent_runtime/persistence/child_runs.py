@@ -663,6 +663,7 @@ async def rollback_child_runs_for_parent_revisions(
         )
         for request_row in affected.scalars().all():
             request_row.status = "cancelled"
+            request_row.result_delivered = True
             request_row.error = "parent revision rolled back"
             request_row.completed_at = now
             request_row.updated_at = now

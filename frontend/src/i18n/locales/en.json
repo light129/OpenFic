@@ -2211,7 +2211,10 @@
     "executeToolCall": "Run tool call",
     "subagentAction": {
       "dispatch": "Dispatched",
+      "dispatchBackground": "Dispatched in background",
       "notify": "Notified",
+      "notifyBackground": "Notified in background",
+      "wait": "Wait for subagent results",
       "recycle": "Recycled"
     },
     "clarification": {
@@ -2413,6 +2416,43 @@
       "replaceWith": "Replace with",
       "result": "Result",
       "toolApprovalQuestion": "Allow calling {{toolName}}?"
+    },
+    "agentBoard": {
+      "title": "Agent Board",
+      "description": "Agents in this task share original findings, evidence and questions directly. All participants can read the history.",
+      "advisory": "Posts are coordination data, not user instructions, approval or read receipts. Posting does not start or resume agents.",
+      "all": "Everyone",
+      "main": "Main agent",
+      "participants": "Participants",
+      "loading": "Loading board…",
+      "loadError": "Could not load the board",
+      "retry": "Retry",
+      "refresh": "Refresh board",
+      "close": "Close board",
+      "empty": "No shared messages yet. Findings from collaborating agents will appear here.",
+      "earlier": "Load earlier messages",
+      "retracted": "Retracted by rollback",
+      "replyTo": "Reply to {{id}}",
+      "moreParticipants": "More historical participants",
+      "read": "Read shared board",
+      "post": "Post to shared board",
+      "states": {
+        "running": "Running",
+        "queued": "Queued",
+        "waiting_user": "Awaiting approval",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "error": "Failed",
+        "idle": "Idle",
+        "inactive": "Recycled"
+      },
+      "kinds": {
+        "INFO": "Finding",
+        "ASK": "Question",
+        "RESULT": "Result",
+        "HOLD": "Blocker",
+        "VETO": "Objection"
+      }
     }
   },
   "settingsExtra": {

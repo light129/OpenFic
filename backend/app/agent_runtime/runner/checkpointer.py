@@ -721,39 +721,43 @@ async def prune_checkpoints_for_thread(
         return deleted_rows
 
     sqlite_checkpointer = cast(AsyncSqliteSaver, checkpointer)
-    cursor = await sqlite_checkpointer.conn.execute(
-        "SELECT checkpoint_ns, checkpoint_id FROM checkpoints WHERE thread_id = ?",
-        (thread_id,),
-    )
-    try:
-        checkpoint_rows = await cursor.fetchall()
-    finally:
-        await cursor.close()
-    if not checkpoint_rows:
-        return 0
+    # Every parent/child shares this saver connection. Use the saver's own lock
+    # so pruning cannot interleave transactions with another prune or aput.
+    async with sqlite_checkpointer.lock:
+        cursor = await sqlite_checkpointer.conn.execute(
+            "SELECT checkpoint_ns, checkpoint_id FROM checkpoints WHERE thread_id = ?",
+            (thread_id,),
+        )
+        try:
+            checkpoint_rows = await cursor.fetchall()
+        finally:
+            await cursor.close()
+        if not checkpoint_rows:
+            return 0
 
-    latest_by_namespace: dict[str, str] = {}
-    for checkpoint_ns, checkpoint_id in checkpoint_rows:
-        if checkpoint_id and checkpoint_id > latest_by_namespace.get(checkpoint_ns, ""):
-            latest_by_namespace[checkpoint_ns] = checkpoint_id
-    retained_ids = set(latest_by_namespace.values()) | retained_checkpoint_ids
-    placeholders = ", ".join("?" for _ in retained_ids)
-    before = sqlite_checkpointer.conn.total_changes
-    await sqlite_checkpointer.conn.execute("BEGIN")
-    try:
-        await sqlite_checkpointer.conn.execute(
-            f"DELETE FROM writes WHERE thread_id = ? AND checkpoint_id NOT IN ({placeholders})",
-            (thread_id, *retained_ids),
-        )
-        await sqlite_checkpointer.conn.execute(
-            f"DELETE FROM checkpoints WHERE thread_id = ? AND checkpoint_id NOT IN ({placeholders})",
-            (thread_id, *retained_ids),
-        )
-        await sqlite_checkpointer.conn.commit()
-    except Exception:
-        await sqlite_checkpointer.conn.rollback()
-        raise
-    return sqlite_checkpointer.conn.total_changes - before
+        latest_by_namespace: dict[str, str] = {}
+        for checkpoint_ns, checkpoint_id in checkpoint_rows:
+            if checkpoint_id and checkpoint_id > latest_by_namespace.get(checkpoint_ns, ""):
+                latest_by_namespace[checkpoint_ns] = checkpoint_id
+        retained_ids = set(latest_by_namespace.values()) | retained_checkpoint_ids
+        placeholders = ", ".join("?" for _ in retained_ids)
+        before = sqlite_checkpointer.conn.total_changes
+        try:
+            await sqlite_checkpointer.conn.execute("BEGIN")
+            await sqlite_checkpointer.conn.execute(
+                f"DELETE FROM writes WHERE thread_id = ? AND checkpoint_id NOT IN ({placeholders})",
+                (thread_id, *retained_ids),
+            )
+            await sqlite_checkpointer.conn.execute(
+                f"DELETE FROM checkpoints WHERE thread_id = ? AND checkpoint_id NOT IN ({placeholders})",
+                (thread_id, *retained_ids),
+            )
+            await sqlite_checkpointer.conn.commit()
+        except BaseException:
+            # Cancellation must not leave a transaction open on the shared saver.
+            await sqlite_checkpointer.conn.rollback()
+            raise
+        return sqlite_checkpointer.conn.total_changes - before
 
 
 async def cleanup_unreachable_checkpoints(

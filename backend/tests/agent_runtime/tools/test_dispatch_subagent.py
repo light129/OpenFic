@@ -161,7 +161,7 @@ async def test_dispatch_subagent_returns_dispatch_id_when_child_request_is_cance
     monkeypatch.setattr(DispatchSubagentTool, "_validate_dispatch", noop)
     monkeypatch.setattr(
         DispatchSubagentTool,
-        "_load_waiting_child_run",
+        "_load_existing_child_run",
         load_waiting_child_run,
     )
     monkeypatch.setattr(DispatchSubagentTool, "_create_child_run", create_child_run)

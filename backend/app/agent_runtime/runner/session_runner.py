@@ -572,6 +572,9 @@ class SessionRunner:
         runtime_context: dict[str, Any],
         audit_context: AuditContext,
     ) -> RunnableConfig:
+        from app.agent_runtime.runner.background_subagents import BackgroundSubagentMailbox
+        from app.agent_runtime.agent_board import AgentBoardContext
+
         async def _noop_node_event_sink(_payload: dict[str, Any]) -> None:
             return None
 
@@ -594,6 +597,11 @@ class SessionRunner:
                 "tool_result_sink": self._emit_tool_result,
                 "compaction_usage_sink": self._emit_persisted_task_usage_events,
                 "inject_queue": self._inject_queue,
+                "background_subagents": BackgroundSubagentMailbox(
+                    parent_session_id=self.session_id,
+                    project_id=self.project_id,
+                ),
+                "agent_board": AgentBoardContext(self.session_id, self.project_id),
                 "inject_message_consumed_sink": self._mark_injected_user_message_sent,
                 "inject_message_attachments": self._get_injected_user_message_attachments,
                 "model_config": self.model_config,

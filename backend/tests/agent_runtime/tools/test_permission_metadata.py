@@ -12,6 +12,8 @@ def test_runtime_tool_permissions_match_registered_user_tools() -> None:
     assert get_default_agent_tool_permissions() == [
         {"tool_name": "activate_skill", "mode": "allow"},
         {"tool_name": "ask_user", "mode": "allow"},
+        {"tool_name": "board_post", "mode": "allow"},
+        {"tool_name": "board_read", "mode": "allow"},
         {"tool_name": "create_character", "mode": "ask"},
         {"tool_name": "create_character_relationship", "mode": "ask"},
         {"tool_name": "create_note_category", "mode": "ask"},
@@ -54,6 +56,7 @@ def test_runtime_tool_permissions_match_registered_user_tools() -> None:
         {"tool_name": "reference_skill", "mode": "allow"},
         {"tool_name": "search_chapters", "mode": "allow"},
         {"tool_name": "update_index", "mode": "allow"},
+        {"tool_name": "wait_subagents", "mode": "allow"},
         {"tool_name": "web_fetch", "mode": "allow"},
         {"tool_name": "web_search", "mode": "allow"},
         {"tool_name": "write_chapter", "mode": "ask"},

@@ -73,3 +73,7 @@ export function getSubagentInstructionText(
 ): string | undefined {
   return pickSubagentString(getSubagentRecords(message), keys);
 }
+
+export function isBackgroundSubagent(message: AgentMessage): boolean {
+  return pickSubagentBoolean(getSubagentRecords(message), ["background"]) === true;
+}

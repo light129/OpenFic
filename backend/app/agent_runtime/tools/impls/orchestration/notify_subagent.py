@@ -23,12 +23,17 @@ from app.agent_runtime.tools.impls.orchestration.common import (
     open_session,
     persist_child_user_message,
     resolve_child_run,
+    start_background_request,
     wait_for_request_resolution,
 )
 from app.agent_runtime.tools.registry import ToolRegistry
 
 
 class NotifySubagentInput(BaseModel):
+    background: bool = Field(
+        default=False,
+        description="是否在后台继续会话并立即返回；完成后自动回传结果。默认同步等待。",
+    )
     dispatch_id: str = Field(
         min_length=1,
         description="subagent 会话ID",
@@ -51,6 +56,7 @@ class NotifySubagentTool(AgentTool):
         使用说明：
         - 恢复的Subagent会话将沿用此前完成时的状态（消息历史、工具输出等），不要提供重复的上下文信息
         - 继续会话时，聚焦于当前任务，明确说明下一步的要求
+        - background=true 时消息排队后立即返回，完成后自动回传该 request_id 的结果；同一会话内消息仍按顺序执行
         - 同一批工具调用中，每个dispatch_id只接受第一条通知；后续通知须等前一条返回后再发送
         - 一个Subagent会话被关闭后，对应dispatch_id就会失效且无法使用
     """)
@@ -93,6 +99,7 @@ class NotifySubagentTool(AgentTool):
         self,
         dispatch_id: str,
         prompt: str,
+        background: bool = False,
     ) -> str:
         configurable = get_configurable(self.config)
         await ensure_primary(self._state, configurable.get("session_factory"))
@@ -150,9 +157,24 @@ class NotifySubagentTool(AgentTool):
             parent_session_id=self.session_id,
             tool_call_id=self.tool_call_id,
             tool_name=self.name,
-            tool_args={"dispatch_id": dispatch_id, "prompt": prompt},
+            tool_args={
+                "dispatch_id": dispatch_id,
+                "prompt": prompt,
+                **({"background": True} if background else {}),
+            },
             row=row,
         )
+        if background:
+            return json.dumps(
+                await start_background_request(
+                    configurable=configurable,
+                    parent_session_id=self.session_id,
+                    row=row,
+                    request_id=request_row.id,
+                    runner=runner,
+                ),
+                ensure_ascii=False,
+            )
         assistant_content = await self._wait_for_assistant_content(
             configurable=configurable,
             child_run_id=row.id,

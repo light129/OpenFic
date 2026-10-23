@@ -9,6 +9,7 @@ import {
   FileDiff,
   History,
   Layers2,
+  MessagesSquare,
   ListChevronsDownUp,
   SquareArrowOutUpRight,
   SquarePen,
@@ -81,6 +82,7 @@ import { joinSubagentStatusStream, subscribeSubagentStatusEvents } from "../lib/
 import { buildAgentMessagesFromTaskMessages } from "../lib/task-message-agent-mapping";
 import { AgentInput, AgentMessages, useAgentSidebar } from "./agent";
 import { ActiveSubagentList } from "./agent/active-subagent-list";
+import { AgentBoardDialog } from "./agent/agent-board";
 import { AgentSessionChangesDialog } from "./agent/agent-changes";
 import { AgentMessagesLoading } from "./agent/agent-messages";
 import { AgentSpecialPanels } from "./agent/agent-special-panels";
@@ -358,6 +360,7 @@ export const AssistantSidebar = forwardRef<AssistantSidebarHandle, AssistantSide
       [],
     );
     const [isLoadingTask, setIsLoadingTask] = useState(false);
+    const [isAgentBoardOpen, setIsAgentBoardOpen] = useState(false);
     const [isMessagesLoading, setIsMessagesLoading] = useState(false);
     const [messageViewport, setMessageViewport] = useState<HTMLDivElement | null>(null);
     const [historyStatusHost, setHistoryStatusHost] = useState<HTMLDivElement | null>(null);
@@ -1549,6 +1552,17 @@ export const AssistantSidebar = forwardRef<AssistantSidebarHandle, AssistantSide
                     <FileDiff size={16} />
                   </IconButton>
                 </Tooltip>
+                <Tooltip content={t("assistant.agentBoard.title")}>
+                  <IconButton
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => setIsAgentBoardOpen(true)}
+                    aria-label={t("assistant.agentBoard.title")}
+                  >
+                    <MessagesSquare size={16} />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip content={t("assistant.history")}>
                   <IconButton
                     variant="ghost"
@@ -1884,6 +1898,11 @@ export const AssistantSidebar = forwardRef<AssistantSidebarHandle, AssistantSide
             />
           </>
         )}
+        <AgentBoardDialog
+          sessionId={parentConversationSessionId}
+          open={isAgentBoardOpen && hasActiveTask}
+          onOpenChange={setIsAgentBoardOpen}
+        />
         <AgentSessionChangesDialog
           key={agentSidebar.sessionId ?? "no-session"}
           changes={agentSidebar.changes}

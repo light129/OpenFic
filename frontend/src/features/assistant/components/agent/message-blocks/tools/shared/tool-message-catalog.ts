@@ -1,6 +1,9 @@
 export const REGISTERED_TOOL_NAMES = [
+  "board_read",
+  "board_post",
   "dispatch_subagent",
   "list_subagents",
+  "wait_subagents",
   "notify_subagent",
   "recycle_subagent",
   "ask_user",
@@ -74,6 +77,20 @@ export interface ToolDescriptorMeta {
 const EXPLORE_TOOL_NAME_PREFIXES = ["get_", "list_", "read_", "search_"] as const;
 
 export const TOOL_DESCRIPTOR_META = {
+  board_read: {
+    toolName: "board_read",
+    group: "orchestration",
+    tag: "board",
+    isExplore: true,
+    contentMode: "hidden",
+  },
+  board_post: {
+    toolName: "board_post",
+    group: "orchestration",
+    tag: "board",
+    isExplore: false,
+    contentMode: "hidden",
+  },
   dispatch_subagent: {
     toolName: "dispatch_subagent",
     group: "orchestration",
@@ -99,6 +116,13 @@ export const TOOL_DESCRIPTOR_META = {
     toolName: "recycle_subagent",
     group: "orchestration",
     tag: "recycle",
+    isExplore: false,
+    contentMode: "hidden",
+  },
+  wait_subagents: {
+    toolName: "wait_subagents",
+    group: "orchestration",
+    tag: "wait",
     isExplore: false,
     contentMode: "hidden",
   },

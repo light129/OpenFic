@@ -12,9 +12,8 @@ from app.agent_runtime.agents.definitions import (
 )
 from app.agent_runtime.persistence.child_runs import (
     create_child_run,
+    get_child_run_for_parent_tool_call,
     get_child_run_request_by_seq,
-    get_running_child_run_request,
-    get_waiting_child_run_for_tool_call,
     update_child_run_request_boundaries,
 )
 from app.agent_runtime.runner.checkpointer import latest_checkpoint_id_for_thread
@@ -28,6 +27,7 @@ from app.agent_runtime.tools.impls.orchestration.common import (
     make_subagent_runner,
     open_session,
     persist_child_user_message,
+    start_background_request,
     wait_for_request_resolution,
 )
 from app.agent_runtime.tools.registry import ToolRegistry
@@ -38,6 +38,10 @@ MAX_DISPATCHES_PER_TURN = 10
 
 
 class DispatchSubagentInput(BaseModel):
+    background: bool = Field(
+        default=False,
+        description="是否在后台执行并立即返回；完成后自动回传结果。默认同步等待。",
+    )
     agent_type: str = Field(
         description="委派用于处理当前任务的专用Agent类型",
     )
@@ -83,6 +87,9 @@ class DispatchSubagentTool(AgentTool):
         
         使用说明：
         - 尽可能并发启动多个Agent处理任务以提高效率，为此只需在一轮消息多次调用工具即可
+        - 无需立即取得结果的独立任务可设 background=true，工具会立即返回 dispatch_id 和 request_id，主代理可继续工作
+        - 后台结果会自动回传；需要显式等待时使用 wait_subagents，不要循环查询状态或重复执行同一任务
+        - 在收齐所需后台结果前，不要给出最终结论；并行任务应避免修改同一章节、设定或笔记
         - Agent完成后会在工具结果中返回，你应默认Agent的执行结果对用户不可见，如要向用户展示执行结果，你应输出一段简短的总结
         - Agent的执行结果包含dispatch_id，可在后续通过notify_subagent复用以继续同一Agent会话
         - Agent的执行结果中包含agent_number，每个agent都有唯一的编号，如有需要你可以用编号来称呼它们
@@ -164,7 +171,7 @@ class DispatchSubagentTool(AgentTool):
         finally:
             await close_session(session)
 
-    async def _load_waiting_child_run(
+    async def _load_existing_child_run(
         self,
         *,
         configurable: dict[str, Any],
@@ -172,7 +179,7 @@ class DispatchSubagentTool(AgentTool):
     ):
         session = await open_session(configurable.get("session_factory"))
         try:
-            return await get_waiting_child_run_for_tool_call(
+            return await get_child_run_for_parent_tool_call(
                 session,
                 parent_session_id=self.session_id,
                 tool_call_id=tool_call_id,
@@ -195,24 +202,6 @@ class DispatchSubagentTool(AgentTool):
             )
             if request_row is None:
                 raise ToolExecutionError("initial subagent request not found")
-            return request_row.id
-        finally:
-            await close_session(session)
-
-    async def _load_running_request_id(
-        self,
-        *,
-        configurable: dict[str, Any],
-        child_run_id: str,
-    ) -> str:
-        session = await open_session(configurable.get("session_factory"))
-        try:
-            request_row = await get_running_child_run_request(
-                session,
-                child_run_id=child_run_id,
-            )
-            if request_row is None:
-                raise ToolExecutionError("active subagent request not found")
             return request_row.id
         finally:
             await close_session(session)
@@ -254,17 +243,18 @@ class DispatchSubagentTool(AgentTool):
         agent_type: str,
         description: str,
         prompt: str,
+        background: bool = False,
     ) -> str:
         configurable = get_configurable(self.config)
         await self._validate_dispatch(agent_type, configurable)
         tool_call_id = self.tool_call_id or generate_id()
-        row = await self._load_waiting_child_run(
+        row = await self._load_existing_child_run(
             configurable=configurable,
             tool_call_id=tool_call_id,
         )
         request_id = None
         if row is not None:
-            request_id = await self._load_running_request_id(
+            request_id = await self._load_initial_request_id(
                 configurable=configurable,
                 child_run_id=row.id,
             )
@@ -319,9 +309,21 @@ class DispatchSubagentTool(AgentTool):
                 "agent_type": agent_type,
                 "description": description,
                 "prompt": prompt,
+                **({"background": True} if background else {}),
             },
             row=row,
         )
+        if background:
+            return json.dumps(
+                await start_background_request(
+                    configurable=configurable,
+                    parent_session_id=self.session_id,
+                    row=row,
+                    request_id=request_id or "",
+                    runner=runner,
+                ),
+                ensure_ascii=False,
+            )
         try:
             assistant_content = await self._wait_for_assistant_content(
                 configurable=configurable,

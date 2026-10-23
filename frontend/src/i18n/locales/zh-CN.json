@@ -2274,7 +2274,10 @@
     "executeToolCall": "执行工具调用",
     "subagentAction": {
       "dispatch": "已委派",
+      "dispatchBackground": "已后台委派",
       "notify": "已通知",
+      "notifyBackground": "已后台通知",
+      "wait": "等待子代理结果",
       "recycle": "已回收"
     },
     "clarification": {
@@ -2476,6 +2479,43 @@
       "replaceWith": "替换为",
       "result": "结果",
       "toolApprovalQuestion": "是否允许调用 {{toolName}}？"
+    },
+    "agentBoard": {
+      "title": "Agent Board",
+      "description": "同一任务内，代理直接共享原始发现、证据和问题。消息对全部参与者可见。",
+      "advisory": "看板信息是协作参考，不代表用户指令、审批或已读；发布不会启动或恢复代理。",
+      "all": "全体",
+      "main": "主代理",
+      "participants": "参与代理",
+      "loading": "正在加载看板…",
+      "loadError": "看板加载失败",
+      "retry": "重试",
+      "refresh": "刷新看板",
+      "close": "关闭看板",
+      "empty": "暂无共享消息。代理协作时的发现会显示在这里。",
+      "earlier": "加载更早消息",
+      "retracted": "已随回滚撤回",
+      "replyTo": "回复消息 {{id}}",
+      "moreParticipants": "还有更多历史参与者",
+      "read": "读取共享看板",
+      "post": "发布共享消息",
+      "states": {
+        "running": "运行中",
+        "queued": "排队中",
+        "waiting_user": "等待审批",
+        "completed": "已完成",
+        "cancelled": "已取消",
+        "error": "失败",
+        "idle": "空闲",
+        "inactive": "已回收"
+      },
+      "kinds": {
+        "INFO": "发现",
+        "ASK": "问题",
+        "RESULT": "结论",
+        "HOLD": "阻塞",
+        "VETO": "异议"
+      }
     }
   },
   "settingsExtra": {

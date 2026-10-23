@@ -93,7 +93,7 @@ async def test_primary_tool_names_forward_explicit_skill_references() -> None:
             referenced_skill_ids=("skill-explicit",),
         )
 
-    assert result == ["activate_skill", "reference_skill"]
+    assert result == ["board_read", "board_post", "activate_skill", "reference_skill"]
     skill_tools.assert_awaited_once_with(
         skill_tools.call_args.args[0],
         skill_tools.call_args.args[1],

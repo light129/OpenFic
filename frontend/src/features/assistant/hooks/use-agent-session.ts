@@ -494,6 +494,9 @@ export function useAgentSession({
 }: UseAgentSessionOptions) {
   const queryClient = useQueryClient();
   const socketUnsubscribeRef = useRef<(() => void) | null>(null);
+  const reconcileReconnectedSessionRef = useRef<(sessionId: string) => Promise<void>>(
+    async () => {},
+  );
   const ignoredApprovalIdsRef = useRef<Set<string>>(new Set());
   const interruptBatchRef = useRef<{
     batchId: string;
@@ -1330,6 +1333,7 @@ export function useAgentSession({
             toast.error(i18n.t("assistant.agentConnectionFailed", { error: error.message }));
           }
         },
+        () => reconcileReconnectedSessionRef.current(targetSessionId),
       );
     },
     [agentKey, commitTranscriptState, handleEvent],
@@ -1419,6 +1423,7 @@ export function useAgentSession({
         }
         onSessionCreated?.(createResponse);
         sessionIdRef.current = createResponse.session_id;
+        historyTaskIdRef.current = createResponse.task_id;
         activeModelIdRef.current = modelId;
         setSessionId(createResponse.session_id);
         queryClient.invalidateQueries({ queryKey: ["tasks", projectId], exact: false });
@@ -2226,6 +2231,59 @@ export function useAgentSession({
       syncPendingMessageState,
     ],
   );
+
+  useEffect(() => {
+    reconcileReconnectedSessionRef.current = async (targetSessionId) => {
+      const taskId = historyTaskIdRef.current;
+      const generation = sessionGenerationRef.current;
+      if (!taskId || sessionIdRef.current !== targetSessionId || isStoppingRef.current) return;
+      const state = await fetchAgentSessionState(targetSessionId);
+      // An active run replays its current stream on join. Completed streams
+      // have been removed from that buffer, so recover their persisted history.
+      if (state.isRunning) return;
+      const task = await fetchTask(taskId);
+      if (
+        generation !== sessionGenerationRef.current ||
+        sessionIdRef.current !== targetSessionId ||
+        isStoppingRef.current
+      )
+        return;
+      const latestState = await fetchAgentSessionState(targetSessionId);
+      if (
+        latestState.isRunning ||
+        generation !== sessionGenerationRef.current ||
+        isStoppingRef.current
+      )
+        return;
+      loadSession(
+        targetSessionId,
+        buildAgentMessagesFromTaskMessages(task.messages, task, task.createdAt),
+        {
+          taskId,
+          messagesCursor: task.messagesCursor,
+          messagesHasMore: task.messagesHasMore,
+          reconnect: true,
+          isRemoteRunning: false,
+          primaryAgentKey: agentKey,
+          currentRoundId: task.currentRevisionId ?? null,
+          currentError: latestState.currentError,
+          pendingInterrupts: latestState.interrupts,
+        },
+      );
+      void refreshChanges(targetSessionId);
+    };
+    // A brief outage can lose terminal events before the socket heartbeat
+    // detects a disconnect. Reconcile on browser connectivity recovery too.
+    const handleOnline = () => {
+      const targetSessionId = sessionIdRef.current;
+      if (!targetSessionId) return;
+      void reconcileReconnectedSessionRef.current(targetSessionId).catch((error) => {
+        console.warn("Failed to recover agent session after reconnect", error);
+      });
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [agentKey, loadSession, refreshChanges]);
 
   const cancelPendingMessage = useCallback(async (): Promise<string | null> => {
     const activeSessionId = sessionIdRef.current ?? sessionId;

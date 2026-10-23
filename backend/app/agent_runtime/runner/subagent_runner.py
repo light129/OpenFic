@@ -18,6 +18,7 @@ from app.agent_runtime.agents.definitions import (
 )
 from app.audit import AuditContext
 from app.agent_runtime.agents.tool_categories import get_tool_names_for_categories
+from app.agent_runtime.agent_board import AgentBoardContext, BOARD_TOOL_NAMES
 from app.agent_runtime.context.helpers import extract_referenced_skill_ids
 from app.agent_runtime.context.pruning import OLD_TOOL_OUTPUT_PLACEHOLDER
 from app.agent_runtime.current_errors import load_subagent_current_turn
@@ -83,7 +84,7 @@ from app.models.clients.model_params import normalize_reasoning_effort
 SYSTEM_DEFAULT_MODEL_REFERENCE = "__system_default_model__"
 SYSTEM_LIGHT_MODEL_REFERENCE = "__system_light_model__"
 _SUBAGENT_RESTRICTED_TOOL_NAMES = frozenset(
-    ("dispatch_subagent", "notify_subagent", "recycle_subagent", "ask_user")
+    ("dispatch_subagent", "notify_subagent", "recycle_subagent", "wait_subagents", "ask_user")
 )
 
 
@@ -460,6 +461,7 @@ class SubagentRunner:
             for name in get_tool_names_for_categories(definition.enabled_tool_categories)
             if name not in _SUBAGENT_RESTRICTED_TOOL_NAMES
         ]
+        names.extend(BOARD_TOOL_NAMES)
         session = await _open_session(self.session_factory)
         try:
             referenced_skill_ids = _get_referenced_skill_ids(runtime_state)
@@ -616,6 +618,9 @@ class SubagentRunner:
                         "compaction_usage_sink": compaction_usage_sink,
                         "model_config": model_config,
                         "history_seq_resolver": history_seq_resolver,
+                        "agent_board": AgentBoardContext(
+                            row.child_thread_id, self.project_id, self.session_factory,
+                        ),
                     },
                 },
                 version="v2",
@@ -742,14 +747,17 @@ class SubagentRunner:
         row: AgentChildRun,
         approval_request: dict[str, Any],
     ) -> None:
-        await self._emit_child_agent_event(
-            row.child_thread_id,
-            "agent:interrupt",
-            {
-                "session_id": row.child_thread_id,
-                **approval_request,
-            },
-        )
+        buffer = get_agent_event_replay_buffer()
+        async with buffer.session_lock(row.child_thread_id):
+            # The paused run is now represented by persisted pending_approval.
+            # Replaying its earlier node/tool events after a history load would
+            # replace that approval with a stale running state.
+            buffer.clear_session_unlocked(row.child_thread_id)
+            await emit(
+                "agent:interrupt",
+                {"session_id": row.child_thread_id, **approval_request},
+                room=agent_subagent_session_room(row.child_thread_id),
+            )
 
     async def _clear_child_replay_run(self, session_id: str, run_id: object) -> None:
         buffer = get_agent_event_replay_buffer()

@@ -25,7 +25,7 @@ def _is_llm_history_message(
 ) -> bool:
     return (
         (
-            row.message_type == "message"
+            row.message_type in {"message", "subagent_result"}
             or (include_user_requests and row.message_type == "user_request")
         )
         and row.llm_visibility == "visible"
@@ -217,6 +217,7 @@ async def load_history(
         elif part.role == "user":
             messages.append(
                 HumanMessage(
+                    id=row.id if row.message_type == "subagent_result" else None,
                     content=part.content,
                     additional_kwargs=part.additional_kwargs or {},
                     response_metadata=_response_metadata(row),

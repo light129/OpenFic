@@ -3,6 +3,7 @@ import {
   Bot,
   BotMessageSquare,
   BotOff,
+  Hourglass,
   BookSearch,
   BookMarked,
   UserRoundPen,
@@ -135,6 +136,24 @@ function getRelationshipDetail(message: AgentMessage): string | undefined {
 }
 
 const TOOL_REGISTRY = {
+  board_read: {
+    toolName: "board_read",
+    group: "orchestration",
+    tag: "board",
+    isExplore: true,
+    contentMode: "hidden",
+    icon: BotMessageSquare,
+    getTitle: () => i18n.t("assistant.agentBoard.read"),
+  },
+  board_post: {
+    toolName: "board_post",
+    group: "orchestration",
+    tag: "board",
+    isExplore: false,
+    contentMode: "hidden",
+    icon: BotMessageSquare,
+    getTitle: () => i18n.t("assistant.agentBoard.post"),
+  },
   dispatch_subagent: {
     toolName: "dispatch_subagent",
     group: "orchestration",
@@ -164,7 +183,7 @@ const TOOL_REGISTRY = {
     isExplore: false,
     contentMode: "expandable",
     icon: BotMessageSquare,
-    getTitle: () => getNotifySubagentTitle(),
+    getTitle: (message) => getNotifySubagentTitle(message),
     getDetail: (message) => getNotifySubagentDetail(message),
     render: (message) => <NotifySubagentToolMessage message={message} />,
   },
@@ -177,6 +196,15 @@ const TOOL_REGISTRY = {
     icon: BotOff,
     getTitle: () => getRecycleSubagentTitle(),
     getDetail: (message) => getRecycleSubagentDetail(message),
+  },
+  wait_subagents: {
+    toolName: "wait_subagents",
+    group: "orchestration",
+    tag: "wait",
+    isExplore: false,
+    contentMode: "hidden",
+    icon: Hourglass,
+    getTitle: () => i18n.t("assistant.subagentAction.wait"),
   },
   ask_user: {
     toolName: "ask_user",

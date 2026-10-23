@@ -15,6 +15,9 @@ from app.agent_runtime.attachments import delete_attachments_for_task
 from app.agent_runtime.modes import AgentMode
 from app.agent_runtime.persistence.model import (
     AgentAttachment,
+    AgentBoard,
+    AgentBoardMessage,
+    AgentBoardReadState,
     AgentChildRun,
     AgentChildRunRequest,
     AgentContextCompaction,
@@ -204,7 +207,9 @@ async def cleanup_orphaned_task_data(session: AsyncSession) -> int:
     orphan_child_run_ids = select(col(AgentChildRun.id)).where(
         col(AgentChildRun.parent_task_id).not_in(existing_task_ids)
     )
-    deleted_rows = 0
+    deleted_rows = await _delete_boards(
+        session, col(AgentBoard.task_id).not_in(existing_task_ids)
+    )
     for task_id in orphan_task_ids:
         deleted_rows += await delete_attachments_for_task(session, task_id=task_id)
     request_result = await session.execute(
@@ -236,6 +241,7 @@ async def _delete_runtime_data_for_tasks(
     task_ids = [task.id for task in tasks]
     if not task_ids:
         return
+    await _delete_boards(session, col(AgentBoard.task_id).in_(task_ids))
     session_ids = [
         task.agent_session_id
         for task in tasks
@@ -270,6 +276,20 @@ async def _delete_runtime_data_for_tasks(
     await task_message_repo.delete_by_task_ids(session, task_ids)
     await _delete_plans_for_sessions(session, session_ids)
     await session.flush()
+
+
+async def _delete_boards(session: AsyncSession, predicate: Any) -> int:
+    # SQLite connections do not enable foreign-key cascades. Explicitly delete
+    # dependent rows as part of the same task cleanup transaction.
+    roots = select(col(AgentBoard.root_session_id)).where(predicate)
+    deleted_rows = 0
+    for model in (AgentBoardMessage, AgentBoardReadState):
+        result = await session.execute(
+            delete(model).where(col(model.root_session_id).in_(roots))
+        )
+        deleted_rows += int(getattr(result, "rowcount", 0) or 0)
+    result = await session.execute(delete(AgentBoard).where(predicate))
+    return deleted_rows + int(getattr(result, "rowcount", 0) or 0)
 
 
 async def _delete_plans_for_sessions(

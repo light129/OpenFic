@@ -3,10 +3,84 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, Column, Index, JSON, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Index,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlmodel import Field, SQLModel
 
 from app.core.ids import generate_id
+
+
+class AgentBoard(SQLModel, table=True):
+    __tablename__ = "agent_boards"
+
+    root_session_id: str = Field(primary_key=True, max_length=64)
+    task_id: str = Field(
+        sa_column=Column(
+            String(64),
+            ForeignKey("tasks.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    project_id: str = Field(index=True, max_length=64)
+    sequence: int = Field(default=0)
+    message_count: int = Field(default=0)
+    message_bytes: int = Field(default=0)
+
+
+class AgentBoardMessage(SQLModel, table=True):
+    __tablename__ = "agent_board_messages"
+    __table_args__ = (
+        UniqueConstraint("root_session_id", "seq", name="uq_agent_board_message_seq"),
+        UniqueConstraint(
+            "root_session_id",
+            "sender",
+            "source_call",
+            name="uq_agent_board_message_call",
+        ),
+    )
+
+    id: str = Field(default_factory=generate_id, primary_key=True, max_length=64)
+    root_session_id: str = Field(
+        sa_column=Column(
+            String(64),
+            ForeignKey("agent_boards.root_session_id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    seq: int = Field(ge=1)
+    sender: str = Field(max_length=64)
+    recipient: str = Field(max_length=64)
+    kind: str = Field(max_length=10)
+    body: str = Field(sa_column=Column(Text, nullable=False))
+    reply_to: str | None = Field(default=None, max_length=64)
+    source_call: str = Field(max_length=200)
+    revision_id: str | None = Field(default=None, index=True, max_length=64)
+    retracted: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class AgentBoardReadState(SQLModel, table=True):
+    __tablename__ = "agent_board_read_states"
+
+    root_session_id: str = Field(
+        sa_column=Column(
+            String(64),
+            ForeignKey("agent_boards.root_session_id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
+    participant: str = Field(primary_key=True, max_length=64)
+    seen_seq: int = Field(default=0)
 
 
 class AgentRunMessage(SQLModel, table=True):
@@ -229,6 +303,8 @@ class AgentChildRunRequest(SQLModel, table=True):
     request_kind: str = Field(index=True, max_length=50)
     content: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))
     status: str = Field(default="pending", index=True, max_length=20)
+    background: bool = Field(default=False)
+    result_delivered: bool = Field(default=False)
     assistant_content: str | None = Field(
         default=None,
         sa_column=Column(Text, nullable=True),

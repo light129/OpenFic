@@ -100,7 +100,7 @@ async def test_dispatch_subagent_emits_preview_after_child_run_is_created(
             return None
 
     monkeypatch.setattr(DispatchSubagentTool, "_validate_dispatch", noop)
-    monkeypatch.setattr(DispatchSubagentTool, "_load_waiting_child_run", noop)
+    monkeypatch.setattr(DispatchSubagentTool, "_load_existing_child_run", noop)
     monkeypatch.setattr(DispatchSubagentTool, "_create_child_run", create_child_run)
     monkeypatch.setattr(
         DispatchSubagentTool, "_load_initial_request_id", load_initial_request_id

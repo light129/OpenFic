@@ -8,6 +8,7 @@ TOOL_CATEGORIES: Mapping[str, tuple[str, ...]] = MappingProxyType(
         "orchestration": (
             "dispatch_subagent",
             "list_subagents",
+            "wait_subagents",
             "notify_subagent",
             "recycle_subagent",
         ),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import inspect
 from dataclasses import dataclass
 from typing import Any
@@ -12,6 +13,7 @@ from app.agent_runtime.agents.definitions import load_agent_definition
 from app.agent_runtime.persistence import repo as message_repo
 from app.agent_runtime.persistence.types import PersistedMessage
 from app.agent_runtime.persistence.child_runs import (
+    TERMINAL_CHILD_RUN_REQUEST_STATUSES,
     get_child_run_agent_number,
     get_child_run_for_parent,
 )
@@ -248,6 +250,51 @@ async def resolve_child_run(
         await close_session(session)
 
 
+async def start_background_request(
+    *,
+    configurable: dict[str, Any],
+    parent_session_id: str,
+    row: AgentChildRun,
+    request_id: str,
+    runner: Any,
+) -> dict[str, Any]:
+    # Persist the mode before the runner can finish (including very short runs).
+    session = await open_session(configurable.get("session_factory"))
+    try:
+        request = await session.get(AgentChildRunRequest, request_id)
+        if request is None or request.child_run_id != row.id:
+            raise ToolExecutionError("subagent request not found")
+        request.background = True
+        request_status = request.status
+        session.add(request)
+        await session.commit()
+    finally:
+        await close_session(session)
+
+    if (
+        request_status not in TERMINAL_CHILD_RUN_REQUEST_STATUSES
+        and not getattr(row, "pending_approval_json", None)
+    ):
+        await ensure_child_processing(
+            parent_session_id=parent_session_id,
+            child_run_id=row.id,
+            runner=runner,
+            clear_cancelled=False,
+        )
+    return {
+        "dispatch_id": row.dispatch_id,
+        "agent_number": get_child_run_agent_number(row.metadata_json),
+        "request_id": request_id,
+        "background": True,
+        "status": (
+            "waiting_user"
+            if getattr(row, "pending_approval_json", None)
+            else "queued" if request_status == "pending" else request_status
+        ),
+        "message": "任务已在后台启动，完成后将自动回传结果。请继续处理独立工作；需要等待时使用 wait_subagents，不要轮询或重复执行该任务。",
+    }
+
+
 async def ensure_child_processing(
     *,
     parent_session_id: str,
@@ -315,7 +362,10 @@ async def ensure_child_processing(
                     )
                 )
 
-    task = asyncio.create_task(_run())
+    # A child is a separate graph run. Inheriting the dispatch tool's LangChain
+    # context also inherits openfic_skip_pre_hooks/callbacks, which can bypass
+    # the child's approval preparation and leak its events into the parent.
+    task = asyncio.create_task(_run(), context=contextvars.Context())
     registered = await registry.try_register_child(
         parent_session_id,
         child_run_id,

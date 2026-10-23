@@ -440,6 +440,10 @@ async def _claim_agent_session_resume(
     if revision is not None and revision.status == "cancelled":
         await _ensure_agent_session_resumable(session, session_id)
     if allow_active and revision is not None and revision.status == "active":
+        # The unsuccessful conditional UPDATE above still opens a SQLite write
+        # transaction. Child approval launches use another session to update
+        # task status, so release this transaction before launching them.
+        await session.commit()
         return revision_id, False
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
@@ -1639,6 +1643,23 @@ async def list_subagent_sessions(
     return items
 
 
+@router.get("/sessions/{session_id}/board")
+async def get_agent_board(
+    session_id: str,
+    before: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=50, ge=1, le=50),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    from app.agent_runtime.agent_board import board_view, resolve_scope
+    from app.agent_runtime.tools.errors import ToolExecutionError
+
+    try:
+        scope = await resolve_scope(session, session_id)
+    except ToolExecutionError as exc:
+        raise HTTPException(status_code=404, detail="Agent Board session not found") from exc
+    return await board_view(session, scope, before=before, limit=limit)
+
+
 @router.get("/subagents/{child_run_id}", response_model=SubagentSessionResponse)
 async def get_subagent_session(
     child_run_id: str,
@@ -1787,6 +1808,12 @@ async def rollback_agent_session(
     replay_buffer = get_agent_event_replay_buffer()
     async with replay_buffer.session_lock(session_id):
         replay_buffer.clear_session_unlocked(session_id)
+
+    await emit(
+        "agent:board",
+        {"session_id": session_id, "reason": "rollback"},
+        room=agent_session_room(session_id),
+    )
 
     if result.restored_checkpoint_id:
         try:

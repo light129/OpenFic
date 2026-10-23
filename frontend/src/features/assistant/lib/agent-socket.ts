@@ -11,6 +11,7 @@ export function subscribeAgentSessionEvents(
   sessionId: string,
   onEvent: (event: AgentEvent) => void,
   onError?: (error: Error) => void,
+  onReconnect?: () => void | Promise<void>,
 ): () => void {
   const activeSocket = getSocket();
   const connectError = (error: Error) => onError?.(error);
@@ -21,11 +22,13 @@ export function subscribeAgentSessionEvents(
   };
   const connectHandler = () => {
     if (!hasJoinedRoom) return;
-    void joinAgentSession(sessionId).catch((error) => {
-      onError?.(
-        error instanceof Error ? error : new Error(i18n.t("assistant.joinAgentSessionFailed")),
-      );
-    });
+    void joinAgentSession(sessionId)
+      .then(() => onReconnect?.())
+      .catch((error) => {
+        onError?.(
+          error instanceof Error ? error : new Error(i18n.t("assistant.joinAgentSessionFailed")),
+        );
+      });
   };
   const handlers = AGENT_SOCKET_EVENTS.map((eventName) => {
     const handler = (data: unknown) => {

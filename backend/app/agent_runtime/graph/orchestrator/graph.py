@@ -15,6 +15,7 @@ from app.agent_runtime.agents.definitions import (
     load_all_agent_definitions,
 )
 from app.agent_runtime.agents.tool_categories import get_tool_names_for_categories
+from app.agent_runtime.agent_board import BOARD_TOOL_NAMES
 from app.agent_runtime.context.helpers import extract_referenced_skill_ids
 from app.agent_runtime.graph.config import build_child_config, get_inject_queue
 from app.agent_runtime.graph.node_events import with_node_events
@@ -58,10 +59,16 @@ async def _primary_tool_names(
     configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
     db_session = configurable.get("db_session") if isinstance(configurable, dict) else None
     if db_session is None:
-        names = list(get_tool_names_for_categories(DEFAULT_PRIMARY_TOOL_CATEGORIES))
+        names = [
+            *get_tool_names_for_categories(DEFAULT_PRIMARY_TOOL_CATEGORIES),
+            *BOARD_TOOL_NAMES,
+        ]
         return [*names, *SKILL_TOOL_NAMES] if allow_runtime_skill_references else names
     definition = await load_agent_definition(db_session, agent_key)
-    return list(get_tool_names_for_categories(definition.enabled_tool_categories)) + list(
+    return [
+        *get_tool_names_for_categories(definition.enabled_tool_categories),
+        *BOARD_TOOL_NAMES,
+    ] + list(
         await skill_tool_names_for_definition(
             definition,
             db_session,
@@ -190,6 +197,7 @@ async def primary_node(
         agent_config,
         model=model,
         inject_queue=inject_queue,
+        background_subagents=configurable.get("background_subagents"),
     )
 
     effective_state = dict(state)
