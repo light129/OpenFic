@@ -2641,5 +2641,36 @@
       "ready": "模型准备完成",
       "failed": "下载失败，可重试"
     }
+  },
+  "mcp": {
+    "title": "MCP Server",
+    "add": "添加 MCP Server",
+    "description": "连接 Remote MCP Server，为 Agent 提供远程工具。仅支持 HTTP 和 SSE 连接。",
+    "name": "名称",
+    "url": "服务器 URL",
+    "transport": "传输协议",
+    "headers": "认证请求头（可选，JSON）",
+    "headersHint": "填写字符串键值对。留空保留已保存的请求头，填写 {} 清除请求头。请求头将加密保存。",
+    "savedHeaders": "已保存的请求头：{{names}}",
+    "enabled": "启用 MCP Server",
+    "defaultHint": "启用后，所有 Agent 默认获得此 Ability。可在 Agent 设置中单独禁用。",
+    "test": "测试连接",
+    "testSuccess": "连接成功，发现 {{count}} 个工具",
+    "testFailed": "连接失败，请检查 URL、传输协议及认证信息。",
+    "saveBeforeTest": "请先保存修改，再测试连接。",
+    "saveFailed": "保存失败，请检查配置或稍后重试。",
+    "invalidHeaders": "请求头必须是字符串键值对组成的 JSON 对象。",
+    "invalidUrl": "请输入不含用户名、密码或片段的有效 HTTP(S) URL。",
+    "loadFailed": "加载 MCP Server 失败",
+    "retry": "重试",
+    "deleteFailed": "删除 MCP Server 失败",
+    "search": "搜索 MCP Server",
+    "empty": "尚未添加 MCP Server",
+    "noResults": "未找到匹配的 MCP Server",
+    "toggle": "启停 {{name}}",
+    "delete": "删除 {{name}}",
+    "deleteConfirm": "删除后，所有 Agent 将无法再调用此 MCP Server。",
+    "selectHint": "选择或添加一个 MCP Server",
+    "globallyDisabled": "此 MCP Server 已全局停用，请先在 MCP Server 设置中启用。"
   }
 }

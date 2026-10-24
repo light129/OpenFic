@@ -53,6 +53,7 @@ from app.api.routers import (
     tunnels,
     skill_reference_docs,
     skills,
+    mcp_servers,
     tasks,
     volumes,
     world_info,
@@ -765,6 +766,7 @@ def create_app() -> FastAPI:
     app.include_router(retrieval_index.router, prefix=app_settings.api_v1_prefix)
     app.include_router(retrieval_index.global_router, prefix=app_settings.api_v1_prefix)
     app.include_router(skills.router, prefix=app_settings.api_v1_prefix)
+    app.include_router(mcp_servers.router, prefix=app_settings.api_v1_prefix)
     app.include_router(skill_reference_docs.router, prefix=app_settings.api_v1_prefix)
     app.include_router(agent_rules.router, prefix=app_settings.api_v1_prefix)
     app.include_router(agent_memories.router, prefix=app_settings.api_v1_prefix)

@@ -33,6 +33,7 @@ from app.storage.models.revision_world_entry_snapshot import RevisionWorldEntryS
 from app.storage.models.revision_content_blob import RevisionContentBlob
 from app.storage.models.retrieval_index import RetrievalIndex
 from app.storage.models.retrieval_chapter_index_state import RetrievalChapterIndexState
+from app.storage.models.mcp_server import MCPServer
 from app.storage.models.skill import Skill
 from app.storage.models.skill_reference_doc import SkillReferenceDoc
 from app.storage.models.setting import Setting
@@ -77,6 +78,7 @@ __all__ = [
     "RevisionWorldEntrySnapshot",
     "RetrievalIndex",
     "RetrievalChapterIndexState",
+    "MCPServer",
     "Skill",
     "SkillReferenceDoc",
     "Setting",

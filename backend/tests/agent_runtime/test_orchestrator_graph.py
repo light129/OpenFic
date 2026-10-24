@@ -299,6 +299,10 @@ async def test_orchestrator_resumes_all_parallel_tool_approvals_once() -> None:
                 AsyncMock(return_value=[]),
             ),
             patch(
+                "app.agent_runtime.graph.orchestrator.graph._primary_mcp_tools",
+                AsyncMock(return_value=[]),
+            ),
+            patch(
                 "app.agent_runtime.graph.orchestrator.graph.auth_hook",
                 _interrupt_for_approval,
             ),
@@ -450,6 +454,10 @@ async def test_orchestrator_sqlite_checkpoint_survives_batch_approval_completion
             ),
             patch(
                 "app.agent_runtime.graph.orchestrator.graph._primary_build_hooks",
+                AsyncMock(return_value=[]),
+            ),
+            patch(
+                "app.agent_runtime.graph.orchestrator.graph._primary_mcp_tools",
                 AsyncMock(return_value=[]),
             ),
             patch(

@@ -71,6 +71,7 @@ import {
   SYSTEM_DEFAULT_MODEL_REFERENCE,
   SYSTEM_LIGHT_MODEL_REFERENCE,
 } from "../lib/agent-definitions.types";
+import { fetchMCPServers, type MCPServer } from "../lib/mcp-servers-api";
 import { fetchSettings } from "../lib/settings-api";
 import { AgentBrandingPicker } from "./agent-branding-picker";
 import { AgentSettingsLockNotice } from "./agent-settings-lock-notice";
@@ -139,6 +140,7 @@ interface AgentFormProps {
   hasLlmModels: boolean;
   toolCategoryOptions: AgentToolCategoryResponse[];
   skills: Skill[];
+  mcpServers: MCPServer[];
   onCloseSettings?: () => void;
   onKindPreviewChange: (key: string, kind: AgentDefinitionResponse["kind"] | null) => void;
   onUpdated: (definition?: AgentDefinitionResponse) => void;
@@ -152,6 +154,7 @@ function AgentForm({
   hasLlmModels,
   toolCategoryOptions,
   skills,
+  mcpServers,
   onCloseSettings,
   onKindPreviewChange,
   onUpdated,
@@ -174,6 +177,9 @@ function AgentForm({
     ...getEnabledToolCategoriesForAgent(def.kind, def.enabled_tool_categories),
   ]);
   const [formEnabledSkills, setFormEnabledSkills] = useState<string[]>([...def.enabled_skills]);
+  const [formDisabledMCPServers, setFormDisabledMCPServers] = useState<string[]>(
+    def.disabled_mcp_servers ?? [],
+  );
   const [formDelegatableAgents, setFormDelegatableAgents] = useState<string[]>([
     ...def.delegatable_agents,
   ]);
@@ -212,6 +218,7 @@ function AgentForm({
       JSON.stringify(formEnabledToolCategories) !==
         JSON.stringify(getEnabledToolCategoriesForAgent(def.kind, def.enabled_tool_categories)) ||
       JSON.stringify(formEnabledSkills) !== JSON.stringify(def.enabled_skills) ||
+      JSON.stringify(formDisabledMCPServers) !== JSON.stringify(def.disabled_mcp_servers ?? []) ||
       JSON.stringify(formDelegatableAgents) !== JSON.stringify(def.delegatable_agents)
     );
   }, [
@@ -225,6 +232,7 @@ function AgentForm({
     formReasoningEffort,
     formEnabledToolCategories,
     formEnabledSkills,
+    formDisabledMCPServers,
     formDelegatableAgents,
   ]);
 
@@ -256,6 +264,7 @@ function AgentForm({
           formEnabledToolCategories,
         ),
         enabled_skills: formEnabledSkills,
+        disabled_mcp_servers: formDisabledMCPServers,
         delegatable_agents: isPrimary ? formDelegatableAgents : [],
       });
     },
@@ -479,7 +488,7 @@ function AgentForm({
         >
           {t("settings.agentsToolCategories")}
         </Text>
-        {selectableToolCategoryOptions.length === 0 ? (
+        {selectableToolCategoryOptions.length === 0 && mcpServers.length === 0 ? (
           <Text
             size="2"
             color="gray"
@@ -512,6 +521,32 @@ function AgentForm({
                   style={{ margin: 0 }}
                 />
                 {opt.name}
+              </label>
+            ))}
+            {mcpServers.map((server) => (
+              <label
+                key={server.id}
+                className="agent-mcp-ability"
+                title={server.is_enabled ? server.name : t("mcp.globallyDisabled")}
+              >
+                <Checkbox
+                  checked={server.is_enabled && !formDisabledMCPServers.includes(server.id)}
+                  disabled={isAgentSettingsLocked || !server.is_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormDisabledMCPServers((previous) =>
+                      checked
+                        ? previous.filter((id) => id !== server.id)
+                        : [...previous, server.id],
+                    )
+                  }
+                />
+                {server.name}
+                <Badge
+                  size="1"
+                  color="gray"
+                >
+                  MCP
+                </Badge>
               </label>
             ))}
           </Flex>
@@ -789,6 +824,14 @@ export function AgentDefinitionsSettings({
     refetchOnMount: "always",
   });
   const skills = useMemo(() => skillsData?.items ?? [], [skillsData?.items]);
+  const {
+    data: mcpServers = [],
+    isLoading: isMCPServersLoading,
+    error: mcpServersError,
+  } = useQuery({
+    queryKey: ["mcp-servers"],
+    queryFn: fetchMCPServers,
+  });
 
   const {
     data: settings,
@@ -837,6 +880,7 @@ export function AgentDefinitionsSettings({
     isToolCategoriesLoading ||
     isToolCategoriesFetching ||
     isSkillsLoading ||
+    isMCPServersLoading ||
     isSkillsFetching ||
     isSettingsLoading ||
     isSettingsFetching ||
@@ -964,6 +1008,7 @@ export function AgentDefinitionsSettings({
           sourceDefinition?.enabled_tool_categories ?? [],
         ),
         enabled_skills: sourceDefinition?.enabled_skills ?? [],
+        disabled_mcp_servers: sourceDefinition?.disabled_mcp_servers ?? [],
         metadata: sourceDefinition?.metadata ?? {},
         color: newColor,
         icon: newIcon,
@@ -1364,6 +1409,7 @@ export function AgentDefinitionsSettings({
       hasLlmModels={hasLlmModels}
       toolCategoryOptions={toolCategoryOptions}
       skills={skills}
+      mcpServers={mcpServers}
       onCloseSettings={onCloseSettings}
       onKindPreviewChange={handleKindPreviewChange}
       onUpdated={updateDefinitionInList}
@@ -1373,6 +1419,14 @@ export function AgentDefinitionsSettings({
 
   return (
     <>
+      {mcpServersError && (
+        <Text
+          color="red"
+          role="alert"
+        >
+          {t("mcp.loadFailed")}
+        </Text>
+      )}
       {isContentLoading ? (
         <Flex
           align="center"

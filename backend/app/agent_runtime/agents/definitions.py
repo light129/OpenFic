@@ -30,6 +30,7 @@ class AgentDefinition:
     color: str | None = None
     icon: str | None = None
     delegatable_agents: tuple[str, ...] = ()
+    disabled_mcp_servers: tuple[str, ...] = ()
 
 
 DEFAULT_AGENT_KEYS: tuple[str, ...] = (
@@ -269,6 +270,7 @@ def agent_definition_from_record(record: AgentDefinitionRecord) -> AgentDefiniti
         ),
         enabled_tool_categories=tuple(record.enabled_tool_categories or ()),
         enabled_skills=tuple(record.enabled_skills or ()),
+        disabled_mcp_servers=tuple(record.disabled_mcp_servers or ()),
         metadata=MappingProxyType(dict(record.metadata_json or {})),
         enabled=record.enabled,
         source=cast(Literal["builtin", "custom"], record.source),

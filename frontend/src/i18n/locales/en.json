@@ -2641,5 +2641,36 @@
       "ready": "Model ready",
       "failed": "Download failed; retry available"
     }
+  },
+  "mcp": {
+    "title": "MCP Servers",
+    "add": "Add MCP Server",
+    "description": "Connect a Remote MCP Server to give Agents remote tools. HTTP and SSE connections are supported.",
+    "name": "Name",
+    "url": "Server URL",
+    "transport": "Transport",
+    "headers": "Authentication headers (optional, JSON)",
+    "headersHint": "Enter string key-value pairs. Leave blank to keep saved headers, or enter {} to clear them. Headers are stored encrypted.",
+    "savedHeaders": "Saved headers: {{names}}",
+    "enabled": "Enable MCP Server",
+    "defaultHint": "Enabled servers are available to all Agents by default. Disable individual MCP Abilities in Agent settings.",
+    "test": "Test connection",
+    "testSuccess": "Connected. Found {{count}} tools.",
+    "testFailed": "Connection failed. Check the URL, transport and authentication.",
+    "saveBeforeTest": "Save your changes before testing the connection.",
+    "saveFailed": "Could not save. Check the configuration or try again.",
+    "invalidHeaders": "Headers must be a JSON object with string keys and values.",
+    "invalidUrl": "Enter a valid HTTP(S) URL without credentials or fragments.",
+    "loadFailed": "Could not load MCP Servers",
+    "retry": "Retry",
+    "deleteFailed": "Could not delete MCP Server",
+    "search": "Search MCP Servers",
+    "empty": "No MCP Servers added yet",
+    "noResults": "No matching MCP Servers",
+    "toggle": "Toggle {{name}}",
+    "delete": "Delete {{name}}",
+    "deleteConfirm": "All Agents will lose access to this MCP Server after deletion.",
+    "selectHint": "Select or add an MCP Server",
+    "globallyDisabled": "This MCP Server is globally disabled. Enable it in MCP Server settings first."
   }
 }

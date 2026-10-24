@@ -96,6 +96,7 @@ async def create_definition(
     reasoning_effort: str | None = None,
     color: str | None = None,
     icon: str | None = None,
+    disabled_mcp_servers: list[str] | None = None,
 ) -> AgentDefinitionRecord:
     existing = await agent_definition_repo.get_by_key(session, key)
     if existing is not None:
@@ -119,6 +120,7 @@ async def create_definition(
         ),
         enabled_tool_categories=normalized_tool_categories,
         enabled_skills=normalized_enabled_skills,
+        disabled_mcp_servers=_normalize_enabled_skills(disabled_mcp_servers),
         metadata_json=metadata or {},
         enabled=True,
         source="custom",
@@ -143,6 +145,7 @@ def _build_record(
         reasoning_effort=default.reasoning_effort,
         enabled_tool_categories=list(default.enabled_tool_categories),
         enabled_skills=list(default.enabled_skills),
+        disabled_mcp_servers=list(default.disabled_mcp_servers),
         metadata_json=dict(default.metadata),
         enabled=default.enabled,
         source="builtin",
@@ -168,6 +171,7 @@ async def update_definition(
     delegatable_agents: list[str] | None = None,
     color: str | None = None,
     icon: str | None = None,
+    disabled_mcp_servers: list[str] | None = None,
 ) -> AgentDefinitionRecord:
     if kind is not None and key in _BUILTIN_KEYS:
         default = get_default_agent_definition(key)
@@ -201,6 +205,8 @@ async def update_definition(
         )
     if enabled_skills is not None:
         record.enabled_skills = _normalize_enabled_skills(enabled_skills)
+    if disabled_mcp_servers is not None:
+        record.disabled_mcp_servers = _normalize_enabled_skills(disabled_mcp_servers)
     if metadata is not None:
         record.metadata_json = metadata
     if enabled is not None:

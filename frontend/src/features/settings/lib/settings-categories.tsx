@@ -35,6 +35,7 @@ export type SettingsCategory =
   | "web-search"
   | "rules"
   | "skills"
+  | "mcp-servers"
   | "agents"
   | "advanced";
 
@@ -112,6 +113,7 @@ export const SETTINGS_CATEGORY_ITEMS: SettingsCategoryItem[] = [
     icon: <Package size={16} />,
     labelKey: "settings.skills",
   },
+  { id: "mcp-servers", icon: <Cable size={16} />, labelKey: "mcp.title" },
   {
     id: "agents",
     icon: <Bot size={16} />,

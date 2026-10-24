@@ -30,6 +30,7 @@ import { ContextSettings } from "../components/context-settings";
 import { EditorSettings } from "../components/editor-settings";
 import { GeneralSettings } from "../components/general-settings";
 import { IndexSettings } from "../components/index-settings";
+import { MCPServersSettings } from "../components/mcp-servers-settings";
 import { ModelsSettings } from "../components/models-settings";
 import { NotificationSettings } from "../components/notification-settings";
 import { PersonalizationSettings } from "../components/personalization-settings";
@@ -94,6 +95,7 @@ const CATEGORY_TITLE_KEY_MAP: Record<SettingsCategory, string> = {
   "web-search": "settings.webSearch",
   rules: "settings.rules",
   skills: "settings.skills",
+  "mcp-servers": "mcp.title",
   agents: "settings.agents",
   advanced: "settings.advanced",
 };
@@ -276,7 +278,10 @@ export function SettingsContent({
   );
 
   const isSplitPanelCategory =
-    activeCategory === "agents" || activeCategory === "skills" || activeCategory === "rules";
+    activeCategory === "agents" ||
+    activeCategory === "skills" ||
+    activeCategory === "rules" ||
+    activeCategory === "mcp-servers";
   const shouldUseFormPagePadding =
     activeCategory === "audio" ||
     activeCategory === "general" ||
@@ -341,7 +346,9 @@ export function SettingsContent({
       }
       if (category === "rules") removeQuery(["agent-rules"]);
       if (category === "skills") removeQuery(["skills"]);
+      if (category === "mcp-servers") removeQuery(["mcp-servers"]);
       if (category === "agents") {
+        removeQuery(["mcp-servers"]);
         removeQuery(["agent-definitions"]);
         removeQuery(["agent-tool-categories"]);
         removeQuery(["skills"]);
@@ -500,6 +507,15 @@ export function SettingsContent({
               />
             ) : null}
             {activeCategory === "web-search" ? <WebSearchSettings /> : null}
+            {activeCategory === "mcp-servers" ? (
+              <MCPServersSettings
+                mobilePage={mobileSubpage}
+                onMobilePageChange={handleMobileSubpageChange}
+                onMobileDetailTitleChange={setMobileSubpageTitle}
+                isAgentSettingsLocked={isAgentSettingsLocked}
+                isAgentSettingsLockLoading={isAgentSettingsLockLoading}
+              />
+            ) : null}
             {activeCategory === "rules" ? (
               <RulesSettings
                 mobilePage={mobileSubpage}

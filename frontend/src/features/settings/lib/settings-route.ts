@@ -14,6 +14,7 @@ export const SETTINGS_ROUTE_CATEGORIES = [
   "web-search",
   "rules",
   "skills",
+  "mcp-servers",
   "agents",
   "advanced",
 ] as const;

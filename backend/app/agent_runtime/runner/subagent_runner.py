@@ -51,6 +51,7 @@ from app.agent_runtime.tools.hooks import (
     world_entry_refresh_post_hook,
 )
 from app.agent_runtime.tools.impls.skill.skill import skill_tool_names_for_definition
+from app.agent_runtime.tools.mcp import build_mcp_tools
 from app.agent_runtime.types import (
     DEFAULT_AGENT_RECURSION_LIMIT,
     ReactAgentConfig,
@@ -471,6 +472,7 @@ class SubagentRunner:
                     referenced_skill_ids=referenced_skill_ids,
                 )
             )
+            mcp_tools = await build_mcp_tools(definition, session, runtime_state)
         finally:
             await _close_session(session)
         return ToolRegistry.get_tools(
@@ -483,7 +485,7 @@ class SubagentRunner:
                 world_entry_refresh_post_hook,
                 character_refresh_post_hook,
             ],
-        )
+        ) + mcp_tools
 
     async def _build_runtime_state(
         self,

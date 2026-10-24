@@ -22,6 +22,7 @@ from app.agent_runtime.graph.orchestrator.state import OrchestratorState
 from app.agent_runtime.graph.react_agent import create_react_agent
 from app.agent_runtime.model_config import to_client_model_config
 from app.agent_runtime.tools import ToolRegistry
+from app.agent_runtime.tools.mcp import build_mcp_tools
 from app.agent_runtime.tools.impls.skill.skill import (
     SKILL_TOOL_NAMES,
     skill_tool_names_for_definition,
@@ -33,7 +34,9 @@ from app.agent_runtime.tools.hooks.dispatch_description import (
     build_dispatch_subagent_description_hook,
 )
 from app.agent_runtime.tools.hooks.note_refresh import note_refresh_post_hook
-from app.agent_runtime.tools.hooks.world_entry_refresh import world_entry_refresh_post_hook
+from app.agent_runtime.tools.hooks.world_entry_refresh import (
+    world_entry_refresh_post_hook,
+)
 from app.agent_runtime.types import ReactAgentConfig, TerminationCondition
 from app.models.clients.model_factory import ModelConfig, create_chat_model
 
@@ -56,12 +59,16 @@ async def _primary_tool_names(
     allow_runtime_skill_references: bool = False,
 ) -> list[str]:
     configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
-    db_session = configurable.get("db_session") if isinstance(configurable, dict) else None
+    db_session = (
+        configurable.get("db_session") if isinstance(configurable, dict) else None
+    )
     if db_session is None:
         names = list(get_tool_names_for_categories(DEFAULT_PRIMARY_TOOL_CATEGORIES))
         return [*names, *SKILL_TOOL_NAMES] if allow_runtime_skill_references else names
     definition = await load_agent_definition(db_session, agent_key)
-    return list(get_tool_names_for_categories(definition.enabled_tool_categories)) + list(
+    return list(
+        get_tool_names_for_categories(definition.enabled_tool_categories)
+    ) + list(
         await skill_tool_names_for_definition(
             definition,
             db_session,
@@ -69,6 +76,19 @@ async def _primary_tool_names(
             allow_runtime_skill_references=allow_runtime_skill_references,
         )
     )
+
+
+async def _primary_mcp_tools(
+    config: RunnableConfig | None, agent_key: str, state: dict[str, Any]
+) -> list[BaseTool]:
+    configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
+    db_session = (
+        configurable.get("db_session") if isinstance(configurable, dict) else None
+    )
+    if db_session is None:
+        return []
+    definition = await load_agent_definition(db_session, agent_key)
+    return list(await build_mcp_tools(definition, db_session, state))
 
 
 def _primary_referenced_skill_ids(state: OrchestratorState) -> tuple[str, ...]:
@@ -112,7 +132,9 @@ async def _primary_build_hooks(
     agent_key: str = "build",
 ):
     configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
-    db_session = configurable.get("db_session") if isinstance(configurable, dict) else None
+    db_session = (
+        configurable.get("db_session") if isinstance(configurable, dict) else None
+    )
     if db_session is None:
         definitions = dict(DEFAULT_AGENT_DEFINITIONS)
     else:
@@ -133,7 +155,9 @@ async def _primary_messages(state: OrchestratorState) -> list[BaseMessage]:
         messages.append(
             HumanMessage(
                 content=user_request,
-                additional_kwargs={"openfic_attachments": attachments} if attachments else {},
+                additional_kwargs={"openfic_attachments": attachments}
+                if attachments
+                else {},
             )
         )
     return messages
@@ -162,11 +186,12 @@ async def primary_node(
     tool_state["active_agent"] = agent_key
     tool_state["referenced_skill_ids"] = list(referenced_skill_ids)
 
+    mcp_tools = await _primary_mcp_tools(config, agent_key, tool_state)
+
     agent_config = ReactAgentConfig(
         name=agent_key,
-        tools=cast(
-            list[BaseTool],
-            ToolRegistry.get_tools(
+        tools=[
+            *ToolRegistry.get_tools(
                 names=await _primary_tool_names(
                     config,
                     agent_key=agent_key,
@@ -183,7 +208,8 @@ async def primary_node(
                     character_refresh_post_hook,
                 ],
             ),
-        ),
+            *mcp_tools,
+        ],
         termination=TerminationCondition(mode="no_tool_call"),
     )
     react_graph = create_react_agent(

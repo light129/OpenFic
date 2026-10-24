@@ -17,6 +17,7 @@ export interface AgentDefinitionResponse {
   reasoning_effort: ReasoningEffort | null;
   enabled_tool_categories: string[];
   enabled_skills: string[];
+  disabled_mcp_servers: string[];
   metadata: Record<string, unknown>;
   enabled: boolean;
   source: "builtin" | "custom";
@@ -35,6 +36,7 @@ export interface AgentDefinitionCreateRequest {
   reasoning_effort: ReasoningEffort | null;
   enabled_tool_categories: string[];
   enabled_skills: string[];
+  disabled_mcp_servers: string[];
   metadata: Record<string, unknown>;
   color?: string | null;
   icon?: string | null;
@@ -50,6 +52,7 @@ export interface AgentDefinitionUpdateRequest {
   reasoning_effort?: ReasoningEffort | null;
   enabled_tool_categories?: string[] | null;
   enabled_skills?: string[] | null;
+  disabled_mcp_servers?: string[] | null;
   metadata?: Record<string, unknown> | null;
   enabled?: boolean | null;
   color?: string | null;

@@ -28,3 +28,18 @@
     flex: 0 0 100%;
   }
 }
+
+.agent-mcp-ability {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-a5);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+}
+.agent-mcp-ability:has(button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

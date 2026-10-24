@@ -134,6 +134,10 @@ class AgentDefinitionRecord(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False, default=list),
     )
+    disabled_mcp_servers: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False, default=list),
+    )
     metadata_json: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON, nullable=False, default=dict),
